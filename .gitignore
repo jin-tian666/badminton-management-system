@@ -1,0 +1,23 @@
+# Maven build output
+target/
+
+# IDE files
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Database files (optional - keep if you want to exclude actual data)
+# badminton.db
+
+# Claude AI settings
+.claude/
