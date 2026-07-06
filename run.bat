@@ -17,5 +17,5 @@ if not exist "target\classes\com\badminton\ui\MainMenu.class" (
 )
 
 echo.
-java -cp "target\classes;lib\sqlite-jdbc-3.42.0.0.jar" com.badminton.ui.MainMenu
+java -Dfile.encoding=GBK -cp "target\classes;lib\sqlite-jdbc-3.42.0.0.jar" com.badminton.ui.MainMenu
 pause
