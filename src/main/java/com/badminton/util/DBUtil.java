@@ -21,11 +21,6 @@ public class DBUtil {
      * @throws SQLException 连接失败时抛出
      */
     public static Connection getConnection() throws SQLException {
-        try {
-            Class.forName("org.sqlite.JDBC");
-        } catch (ClassNotFoundException e) {
-            throw new SQLException("SQLite JDBC驱动未找到，请将sqlite-jdbc.jar放入classpath", e);
-        }
         return DriverManager.getConnection(DB_URL);
     }
 
@@ -159,7 +154,6 @@ public class DBUtil {
             System.out.println("[系统] 数据库初始化完成。");
         } catch (SQLException e) {
             System.err.println("[错误] 数据库初始化失败：" + e.getMessage());
-            e.printStackTrace();
         } finally {
             close(null, stmt, conn);
         }

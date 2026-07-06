@@ -48,6 +48,12 @@ public class MatchService {
             return "开始时间必须早于结束时间！";
         }
 
+        // 1.5 日期范围校验（不得早于2000-01-01，不得晚于2030-01-01）
+        if (match.getMatchDate().compareTo("2000-01-01") < 0
+            || match.getMatchDate().compareTo("2030-01-01") > 0) {
+            return "比赛日期必须在 2000-01-01 至 2030-01-01 之间！";
+        }
+
         // 2. 检查场地是否存在且可用
         Court court = courtDao.findById(match.getCourtId());
         if (court == null) {
@@ -112,6 +118,25 @@ public class MatchService {
         Player player = playerDao.findById(playerId);
         if (player == null) {
             return "选手不存在！";
+        }
+
+        // 2.5 性别匹配校验
+        String matchType = match.getMatchType();
+        String playerGender = player.getGender();
+        if (("男单".equals(matchType) || "男双".equals(matchType)) && !"男".equals(playerGender)) {
+            return matchType + "比赛仅限男性选手报名！";
+        }
+        if (("女单".equals(matchType) || "女双".equals(matchType)) && !"女".equals(playerGender)) {
+            return matchType + "比赛仅限女性选手报名！";
+        }
+
+        // 2.6 人数上限校验（单打≤1人，双打≤2人）
+        int currentCount = matchPlayerDao.countByMatchId(matchId);
+        if (matchType.contains("单") && currentCount >= 1) {
+            return "单打比赛最多报名1人，当前已报" + currentCount + "人！";
+        }
+        if (matchType.contains("双") && currentCount >= 2) {
+            return "双打比赛最多报名2人，当前已报" + currentCount + "人！";
         }
 
         // 3. 检查是否重复报名
