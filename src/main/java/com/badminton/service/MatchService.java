@@ -11,6 +11,7 @@ import com.badminton.model.MatchPlayer;
 import com.badminton.model.Player;
 import com.badminton.model.Record;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -98,13 +99,14 @@ public class MatchService {
     }
 
     /**
-     * 选手报名比赛（含选手时间冲突检测）
+     * 选手报名比赛（含选手时间冲突检测、性别校验）
+     * 单打每次报1人，双打每次报2人（一对搭档），无总人数上限
      *
-     * @param matchId  比赛ID
-     * @param playerId 选手ID
+     * @param matchId   比赛ID
+     * @param playerIds 选手ID列表（单打1个，双打2个）
      * @return 操作结果描述
      */
-    public String addPlayerToMatch(int matchId, int playerId) {
+    public String addPlayersToMatch(int matchId, List<Integer> playerIds) {
         // 1. 检查比赛是否存在
         Match match = matchDao.findById(matchId);
         if (match == null) {
@@ -114,52 +116,62 @@ public class MatchService {
             return "只有[待开始]状态的比赛才能报名！";
         }
 
-        // 2. 检查选手是否存在
-        Player player = playerDao.findById(playerId);
-        if (player == null) {
-            return "选手不存在！";
-        }
-
-        // 2.5 性别匹配校验
         String matchType = match.getMatchType();
-        String playerGender = player.getGender();
-        if (("男单".equals(matchType) || "男双".equals(matchType)) && !"男".equals(playerGender)) {
-            return matchType + "比赛仅限男性选手报名！";
+
+        // 2. 校验单次报名人数：单打1人，双打2人
+        boolean isSingles = matchType.contains("单");
+        boolean isDoubles = matchType.contains("双");
+        if (isSingles && playerIds.size() != 1) {
+            return "单打比赛每次只能报名1人！";
         }
-        if (("女单".equals(matchType) || "女双".equals(matchType)) && !"女".equals(playerGender)) {
-            return matchType + "比赛仅限女性选手报名！";
+        if (isDoubles && playerIds.size() != 2) {
+            return "双打比赛每次必须报名2人（一对搭档）！";
         }
 
-        // 2.6 人数上限校验（单打≤1人，双打≤2人）
-        int currentCount = matchPlayerDao.countByMatchId(matchId);
-        if (matchType.contains("单") && currentCount >= 1) {
-            return "单打比赛最多报名1人，当前已报" + currentCount + "人！";
-        }
-        if (matchType.contains("双") && currentCount >= 2) {
-            return "双打比赛最多报名2人，当前已报" + currentCount + "人！";
-        }
+        // 3. 逐个校验选手（存在性、性别、重复报名、时间冲突）
+        for (int pid : playerIds) {
+            Player player = playerDao.findById(pid);
+            if (player == null) {
+                return "选手ID=" + pid + " 不存在！";
+            }
 
-        // 3. 检查是否重复报名
-        if (matchPlayerDao.isPlayerInMatch(matchId, playerId)) {
-            return "选手[" + player.getName() + "]已报名该比赛！";
-        }
+            // 性别匹配校验
+            String playerGender = player.getGender();
+            if (("男单".equals(matchType) || "男双".equals(matchType)) && !"男".equals(playerGender)) {
+                return matchType + "比赛仅限男性选手报名，选手[" + player.getName() + "]性别不符！";
+            }
+            if (("女单".equals(matchType) || "女双".equals(matchType)) && !"女".equals(playerGender)) {
+                return matchType + "比赛仅限女性选手报名，选手[" + player.getName() + "]性别不符！";
+            }
 
-        // 4. 选手时间冲突检测：查询该选手已报名的所有比赛，检查时间是否重叠
-        List<Match> playerMatches = matchDao.findByPlayerId(playerId);
-        for (Match m : playerMatches) {
-            if (m.getMatchDate().equals(match.getMatchDate())) {
-                // 时间重叠判断：start1 < end2 AND end1 > start2
-                if (match.getStartTime().compareTo(m.getEndTime()) < 0
-                    && match.getEndTime().compareTo(m.getStartTime()) > 0) {
-                    return "选手[" + player.getName() + "]在同一时间段已报名比赛["
-                         + m.getName() + "]（" + m.getStartTime() + "-" + m.getEndTime() + "）！";
+            // 检查是否重复报名
+            if (matchPlayerDao.isPlayerInMatch(matchId, pid)) {
+                return "选手[" + player.getName() + "]已报名该比赛！";
+            }
+
+            // 选手时间冲突检测
+            List<Match> playerMatches = matchDao.findByPlayerId(pid);
+            for (Match m : playerMatches) {
+                if (m.getMatchDate().equals(match.getMatchDate())) {
+                    if (match.getStartTime().compareTo(m.getEndTime()) < 0
+                        && match.getEndTime().compareTo(m.getStartTime()) > 0) {
+                        return "选手[" + player.getName() + "]在同一时间段已报名比赛["
+                             + m.getName() + "]（" + m.getStartTime() + "-" + m.getEndTime() + "）！";
+                    }
                 }
             }
         }
 
-        // 5. 报名
-        int id = matchPlayerDao.insert(matchId, playerId);
-        return id > 0 ? "选手[" + player.getName() + "]报名成功！" : "报名失败！";
+        // 4. 全部校验通过，逐个插入
+        List<String> names = new ArrayList<>();
+        for (int pid : playerIds) {
+            matchPlayerDao.insert(matchId, pid);
+            Player player = playerDao.findById(pid);
+            names.add(player.getName());
+        }
+
+        String namesStr = String.join("、", names);
+        return "报名成功！选手：" + namesStr;
     }
 
     /**

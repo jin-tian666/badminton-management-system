@@ -6,6 +6,8 @@ import com.badminton.service.CourtService;
 import com.badminton.service.MatchService;
 import com.badminton.util.InputUtil;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -114,7 +116,7 @@ public class MatchMenu {
     }
 
     /**
-     * 选手报名
+     * 选手报名（单打1人，双打2人一对）
      */
     private void signUpPlayer() {
         System.out.println("\n---------- 选手报名 ----------");
@@ -127,9 +129,27 @@ public class MatchMenu {
             return;
         }
         System.out.println("比赛：" + match.getName() + " (" + match.getMatchDate() + " " + match.getStartTime() + "-" + match.getEndTime() + ")");
+        System.out.println("类型：" + match.getMatchType());
 
-        int playerId = InputUtil.readInt("选手ID：");
-        String result = matchService.addPlayerToMatch(matchId, playerId);
+        boolean isSingles = match.getMatchType().contains("单");
+        boolean isDoubles = match.getMatchType().contains("双");
+        int currentCount = matchService.getPlayerCount(matchId);
+        System.out.println("当前已报名人数：" + currentCount);
+
+        List<Integer> playerIds;
+        if (isSingles) {
+            int playerId = InputUtil.readInt("选手ID：");
+            playerIds = Collections.singletonList(playerId);
+        } else if (isDoubles) {
+            int playerId1 = InputUtil.readInt("搭档选手1 ID：");
+            int playerId2 = InputUtil.readInt("搭档选手2 ID：");
+            playerIds = Arrays.asList(playerId1, playerId2);
+        } else {
+            int playerId = InputUtil.readInt("选手ID：");
+            playerIds = Collections.singletonList(playerId);
+        }
+
+        String result = matchService.addPlayersToMatch(matchId, playerIds);
         System.out.println(result);
         InputUtil.pressEnter();
     }

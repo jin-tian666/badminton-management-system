@@ -98,11 +98,49 @@ public class PlayerMenu {
     private void addPlayer() {
         System.out.println("\n---------- 添加选手 ----------");
         String name = InputUtil.readString("姓名：");
-        System.out.print("性别（男/女）：");
-        String gender = InputUtil.readString("");
-        System.out.println("级别：初级 / 中级 / 高级 / 专业");
-        String level = InputUtil.readString("级别：");
-        String phone = InputUtil.readString("联系电话（可选）：");
+
+        // 性别 — 数字选择避免编码问题
+        String gender;
+        while (true) {
+            int g = InputUtil.readInt("性别（1.男  2.女）：");
+            if (g == 1) { gender = "男"; break; }
+            if (g == 2) { gender = "女"; break; }
+            System.out.println("[错误] 请输入1（男）或2（女）！");
+        }
+
+        // 级别 — 数字选择避免编码问题
+        String level;
+        while (true) {
+            System.out.println("级别：1.初级  2.中级  3.高级  4.专业");
+            int lv = InputUtil.readInt("请选择级别：");
+            if (lv == 1) { level = "初级"; break; }
+            if (lv == 2) { level = "中级"; break; }
+            if (lv == 3) { level = "高级"; break; }
+            if (lv == 4) { level = "专业"; break; }
+            System.out.println("[错误] 请输入1-4之间的数字！");
+        }
+
+        // 电话号码（可为空，非空时须为1开头的11位数字）
+        String phone;
+        while (true) {
+            phone = InputUtil.readString("联系电话（可选，1开头的11位数字）：");
+            if (phone.isEmpty()) {
+                break;
+            }
+            if (phone.matches("1\\d{10}")) {
+                break;
+            }
+            System.out.println("[错误] 电话号码须以1开头的11位数字，或留空！");
+        }
+
+        System.out.printf("确认添加 — 姓名：%s  性别：%s  级别：%s  电话：%s\n",
+                name, gender, level, phone.isEmpty() ? "无" : phone);
+        String confirm = InputUtil.readString("确认？(y/n)：");
+        if (!"y".equalsIgnoreCase(confirm) && !"yes".equalsIgnoreCase(confirm)) {
+            System.out.println("已取消。");
+            InputUtil.pressEnter();
+            return;
+        }
 
         Player player = new Player(name, gender, level, phone);
         String result = playerService.addPlayer(player);
@@ -123,17 +161,53 @@ public class PlayerMenu {
             return;
         }
         System.out.println("当前信息：" + old);
-        System.out.println("（留空表示不修改该项）");
+        System.out.println("（留空/输入0表示不修改该项）");
 
         String name = InputUtil.readString("新姓名[" + old.getName() + "]：");
-        String gender = InputUtil.readString("新性别[" + old.getGender() + "]：");
-        String level = InputUtil.readString("新级别[" + old.getLevel() + "]：");
-        String phone = InputUtil.readString("新电话[" + (old.getPhone() != null ? old.getPhone() : "无") + "]：");
+
+        // 性别 — 数字选择
+        String gender = null;
+        while (true) {
+            String prompt = String.format("新性别（1.男  2.女  0.不修改）[当前=%s]：", old.getGender());
+            int g = InputUtil.readInt(prompt);
+            if (g == 0) break;
+            if (g == 1) { gender = "男"; break; }
+            if (g == 2) { gender = "女"; break; }
+            System.out.println("[错误] 请输入1（男）、2（女）或0（跳过）！");
+        }
+
+        // 级别 — 数字选择
+        String level = null;
+        while (true) {
+            String prompt = String.format("新级别（1.初级 2.中级 3.高级 4.专业  0.不修改）[当前=%s]：", old.getLevel());
+            int lv = InputUtil.readInt(prompt);
+            if (lv == 0) break;
+            if (lv == 1) { level = "初级"; break; }
+            if (lv == 2) { level = "中级"; break; }
+            if (lv == 3) { level = "高级"; break; }
+            if (lv == 4) { level = "专业"; break; }
+            System.out.println("[错误] 请输入1-4之间的数字，或0跳过！");
+        }
+
+        // 电话
+        String phone = null;
+        while (true) {
+            String oldPhone = old.getPhone() != null ? old.getPhone() : "无";
+            phone = InputUtil.readString("新电话（1开头的11位数字，留空不修改）[" + oldPhone + "]：");
+            if (phone.isEmpty()) {
+                phone = null;
+                break;
+            }
+            if (phone.matches("1\\d{10}")) {
+                break;
+            }
+            System.out.println("[错误] 电话号码须以1开头的11位数字，或留空！");
+        }
 
         if (!name.isEmpty()) old.setName(name);
-        if (!gender.isEmpty()) old.setGender(gender);
-        if (!level.isEmpty()) old.setLevel(level);
-        if (!phone.isEmpty()) old.setPhone(phone);
+        if (gender != null) old.setGender(gender);
+        if (level != null) old.setLevel(level);
+        if (phone != null) old.setPhone(phone);
 
         String result = playerService.updatePlayer(old);
         System.out.println(result);

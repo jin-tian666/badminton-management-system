@@ -56,6 +56,13 @@ public class PlayerService {
         if (!valid) {
             return "级别必须为：初级、中级、高级、专业！";
         }
+        // 电话号码校验：可为空，非空时须为1开头的11位数字
+        String phone = player.getPhone();
+        if (phone != null && !phone.isEmpty()) {
+            if (!phone.matches("1\\d{10}")) {
+                return "电话号码须以1开头的11位数字！";
+            }
+        }
         int id = playerDao.insert(player);
         return id > 0 ? "选手添加成功！ID=" + id : "添加失败！";
     }
